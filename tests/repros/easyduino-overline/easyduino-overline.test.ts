@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { KicadToCircuitJsonConverter } from "../../../lib"
 import { stackCircuitJsonKicadPngs } from "../../fixtures/stackCircuitJsonKicadPngs"
@@ -22,12 +22,11 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
   const circuitJson = converter.getOutput()
   expect(circuitJson.length).toBeGreaterThan(0)
 
-  mkdirSync(new URL("./__snapshots__", import.meta.url), { recursive: true })
-  writeFileSync(
-    new URL(
-      "./__snapshots__/easyduino-overline-circuit-json.json",
-      import.meta.url,
-    ),
+  const fs = await import("node:fs/promises")
+  const snapshotDirectory = new URL("./__snapshots__/", import.meta.url)
+  await fs.mkdir(snapshotDirectory, { recursive: true })
+  await fs.writeFile(
+    new URL("easyduino-overline-circuit-json.json", snapshotDirectory),
     JSON.stringify(circuitJson, null, 2),
   )
 
@@ -42,15 +41,16 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
   const circuitJsonPng = await takeCircuitJsonSnapshot({
     circuitJson: circuitJson as any,
     outputType: "schematic",
-    width: 1200,
-    height: 1600,
   })
 
-  const stackedPng = await stackCircuitJsonKicadPngs(
-    circuitJsonPng,
-    kicadPng,
-    "horizontal",
+  const { convertCircuitJsonToSchematicSvg } = await import("circuit-to-svg")
+  const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson as any)
+  await fs.writeFile(
+    new URL("easyduino-overline-circuit-json.svg", snapshotDirectory),
+    circuitJsonSvg,
   )
+
+  const stackedPng = await stackCircuitJsonKicadPngs(circuitJsonPng, kicadPng)
   await expect(stackedPng).toMatchPngSnapshot(
     import.meta.path,
     "easyduino-overline",
