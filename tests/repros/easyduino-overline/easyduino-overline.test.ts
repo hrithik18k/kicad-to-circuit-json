@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import sharp from "sharp"
 import { KicadToCircuitJsonConverter } from "../../../lib"
 import { stackCircuitJsonKicadPngs } from "../../fixtures/stackCircuitJsonKicadPngs"
-import { takeCircuitJsonSnapshot } from "../../fixtures/take-circuit-json-snapshot"
 import { takeKicadSnapshot } from "../../fixtures/take-kicad-snapshot"
 import "../../fixtures/png-matcher"
 
@@ -37,18 +37,16 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
   const kicadPng = Object.values(kicadSnapshot.generatedFileContent)[0]
   if (!kicadPng) throw new Error("Expected KiCad schematic snapshot")
 
-  // Render the complete generated output without overriding labels or styling.
-  const circuitJsonPng = await takeCircuitJsonSnapshot({
-    circuitJson: circuitJson as any,
-    outputType: "schematic",
-  })
-
+  // Render once, then use this exact SVG for both committed and stacked output.
   const { convertCircuitJsonToSchematicSvg } = await import("circuit-to-svg")
   const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson as any)
   await fs.writeFile(
     new URL("easyduino-overline-circuit-json.svg", snapshotDirectory),
     circuitJsonSvg,
   )
+  const circuitJsonPng = await sharp(Buffer.from(circuitJsonSvg))
+    .png()
+    .toBuffer()
 
   const stackedPng = await stackCircuitJsonKicadPngs(circuitJsonPng, kicadPng)
   await expect(stackedPng).toMatchPngSnapshot(
