@@ -40,7 +40,10 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
 
   // Render once, then use this exact SVG for both committed and stacked output.
   const { convertCircuitJsonToSchematicSvg } = await import("circuit-to-svg")
-  const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson as any)
+  const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson as any, {
+    width: 700,
+    height: 800,
+  })
   await fs.writeFile(
     new URL("easyduino-overline-circuit-json.svg", snapshotDirectory),
     circuitJsonSvg,
