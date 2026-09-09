@@ -33,9 +33,10 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
   const kicadSnapshot = await takeKicadSnapshot({
     kicadFilePath: fileURLToPath(schematicPath),
     kicadFileType: "sch",
+    generatePng: false,
   })
-  const kicadPng = Object.values(kicadSnapshot.generatedFileContent)[0]
-  if (!kicadPng) throw new Error("Expected KiCad schematic snapshot")
+  const kicadSvg = Object.values(kicadSnapshot.generatedFileContent)[0]
+  if (!kicadSvg) throw new Error("Expected KiCad schematic snapshot")
 
   // Render once, then use this exact SVG for both committed and stacked output.
   const { convertCircuitJsonToSchematicSvg } = await import("circuit-to-svg")
@@ -44,9 +45,15 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
     new URL("easyduino-overline-circuit-json.svg", snapshotDirectory),
     circuitJsonSvg,
   )
-  const circuitJsonPng = await sharp(Buffer.from(circuitJsonSvg))
-    .png()
-    .toBuffer()
+  // Rasterize both vector renderings at the same density so GitHub previews
+  // remain sharp while preserving each SVG's geometry and aspect ratio.
+  const snapshotDensity = 144
+  const [circuitJsonPng, kicadPng] = await Promise.all([
+    sharp(Buffer.from(circuitJsonSvg), { density: snapshotDensity })
+      .png()
+      .toBuffer(),
+    sharp(kicadSvg, { density: snapshotDensity }).png().toBuffer(),
+  ])
 
   const stackedPng = await stackCircuitJsonKicadPngs(circuitJsonPng, kicadPng)
   await expect(stackedPng).toMatchPngSnapshot(
