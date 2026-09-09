@@ -43,7 +43,7 @@ test("Easyduino schematic reproduces KiCad overline markup rendering", async () 
   const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson as any, {
     width: 700,
     height: 800,
-  })
+  }).replaceAll("sans-serif", "Arial, sans-serif")
   await fs.writeFile(
     new URL("easyduino-overline-circuit-json.svg", snapshotDirectory),
     circuitJsonSvg,
